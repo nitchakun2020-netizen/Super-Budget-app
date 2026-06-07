@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="บัญชี">
+<meta name="theme-color" content="#2C2C2A">
+<title>บัญชีรายรับรายจ่าย</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green: #0F6E56;
+  --green-light: #E1F5EE;
+  --green-mid: #1D9E75;
+  --red: #993C1D;
+  --red-light: #FAECE7;
+  --red-mid: #D85A30;
+  --gray-dark: #2C2C2A;
+  --gray-mid: #888780;
+  --gray-light: #F1EFE8;
+  --gray-border: #D3D1C7;
+  --white: #fff;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: #F5F4F0;
+  color: var(--gray-dark);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ── */
+.topbar {
+  background: var(--gray-dark);
+  padding: calc(var(--safe-top) + 14px) 16px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-title { font-size: 17px; font-weight: 700; color: #fff; }
+.topbar-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.week-nav { display: flex; align-items: center; gap: 8px; }
+.week-nav button {
+  width: 30px; height: 30px;
+  background: rgba(255,255,255,0.12);
+  border: none; border-radius: 8px;
+  color: #fff; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.week-nav button:active { background: rgba(255,255,255,0.25); }
+.week-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.85); min-width: 70px; text-align: center; }
+
+/* ── Scroll area ── */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 14px calc(var(--safe-bot) + 80px);
+}
+
+/* ── Cards ── */
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.card-full { grid-column: 1 / -1; }
+.card {
+  background: var(--white);
+  border: 1px solid var(--gray-border);
+  border-radius: 14px;
+  padding: 13px 15px;
+}
+.card.dark { background: var(--gray-dark); border-color: var(--gray-dark); }
+.card-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-mid); margin-bottom: 5px; }
+.card.dark .card-label { color: rgba(255,255,255,0.45); }
+.card-value { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.card.income .card-value { color: var(--green); }
+.card.expense .card-value { color: var(--red); }
+.card.dark .card-value { color: #fff; }
+.card-sub { font-size: 11px; color: var(--gray-mid); margin-top: 3px; }
+.card.dark .card-sub { color: rgba(255,255,255,0.4); }
+
+/* ── Section box ── */
+.section {
+  background: var(--white);
+  border: 1px solid var(--gray-border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.section-header {
+  padding: 12px 15px 10px;
+  border-bottom: 1px solid var(--gray-border);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-mid);
+}
+
+/* ── Day rows ── */
+.day-row {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--gray-border);
+  gap: 8px;
+}
+.day-row:last-child { border-bottom: none; }
+.day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.day-name { font-size: 14px; font-weight: 600; }
+.day-date { font-size: 11px; color: var(--gray-mid); }
+.day-bal {
+  font-size: 14px;
+  font-weight: 700;
+}
+.day-bal.pos { color: var(--green); }
+.day-bal.neg { color: var(--red); }
+.day-bal.zero { color: var(--gray-mid); }
+
+.day-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.input-group { display: flex; flex-direction: column; gap: 4px; }
+.input-group label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.input-group.inc label { color: var(--green); }
+.input-group.exp label { color: var(--red); }
+.input-group input {
+  height: 40px;
+  border: 1.5px solid var(--gray-border);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: right;
+  background: var(--gray-light);
+  color: var(--gray-dark);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.input-group.inc input:focus { border-color: var(--green-mid); background: var(--green-light); }
+.input-group.exp input:focus { border-color: var(--red-mid); background: var(--red-light); }
+.input-group input::placeholder { color: #C4C3BC; font-weight: 400; }
+
+/* ── Percent bars ── */
+.pct-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
+.pct-block { display: flex; flex-direction: column; gap: 3px; }
+.pct-label { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; color: var(--gray-mid); text-transform: uppercase; }
+.pct-line { display: flex; align-items: center; gap: 7px; }
+.pct-track { flex: 1; height: 6px; background: var(--gray-light); border-radius: 3px; overflow: hidden; }
+.pct-fill { height: 100%; border-radius: 3px; transition: width 0.4s cubic-bezier(.4,0,.2,1); }
+.pct-num { font-size: 12px; font-weight: 700; min-width: 38px; text-align: right; }
+
+/* ── Total row ── */
+.total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  background: var(--gray-light);
+  border-top: 2px solid var(--gray-border);
+}
+.total-label { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.total-vals { display: flex; gap: 16px; align-items: center; }
+.total-inc { font-size: 15px; font-weight: 700; color: var(--green); }
+.total-exp { font-size: 15px; font-weight: 700; color: var(--red); }
+.total-bal { font-size: 16px; font-weight: 700; }
+
+/* ── Mini chart ── */
+.chart-body { padding: 12px 15px; display: flex; flex-direction: column; gap: 9px; }
+.chart-row { display: flex; align-items: center; gap: 10px; }
+.chart-day { font-size: 11px; font-weight: 600; color: var(--gray-mid); width: 48px; text-align: right; flex-shrink: 0; }
+.chart-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.bar-track { background: var(--gray-light); border-radius: 4px; height: 8px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s cubic-bezier(.4,0,.2,1); }
+.bar-fill.inc { background: var(--green-mid); }
+.bar-fill.exp { background: var(--red-mid); }
+.chart-vals { font-size: 10px; width: 100px; text-align: right; flex-shrink: 0; line-height: 1.6; }
+
+/* ── Monthly ── */
+.monthly-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 6px 0 14px;
+}
+.monthly-divider hr { flex:1; border: none; border-top: 1px solid var(--gray-border); }
+.monthly-divider span { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gray-mid); white-space: nowrap; }
+
+.month-week-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 15px;
+  border-bottom: 1px solid var(--gray-border);
+}
+.month-week-row:last-child { border-bottom: none; }
+.mw-label { font-size: 13px; font-weight: 600; }
+.mw-sub { font-size: 11px; color: var(--gray-mid); margin-top: 1px; }
+.mw-vals { text-align: right; }
+.mw-inc { font-size: 12px; font-weight: 600; color: var(--green); }
+.mw-exp { font-size: 12px; font-weight: 600; color: var(--red); }
+.mw-bal { font-size: 13px; font-weight: 700; }
+
+.month-total {
+  padding: 13px 15px;
+  background: var(--gray-light);
+  border-top: 2px solid var(--gray-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.month-total-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray-dark); }
+.month-total-vals { display: flex; gap: 12px; align-items: center; }
+
+/* ── Bottom tab bar ── */
+.tabbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--gray-border);
+  padding: 8px 0 calc(var(--safe-bot) + 8px);
+  display: flex;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 4px 0;
+}
+.tab-icon { font-size: 22px; }
+.tab-label { font-size: 10px; font-weight: 600; color: var(--gray-mid); }
+.tab.active .tab-label { color: var(--gray-dark); }
+
+/* ── Install banner ── */
+#installBanner {
+  display: none;
+  position: fixed;
+  bottom: calc(var(--safe-bot) + 64px);
+  left: 14px; right: 14px;
+  background: var(--gray-dark);
+  color: #fff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  z-index: 200;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#installBanner.hidden { display: none; }
+.install-icon { font-size: 28px; flex-shrink: 0; }
+.install-text { flex: 1; }
+.install-text strong { font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px; }
+.install-text span { font-size: 11px; color: rgba(255,255,255,0.6); }
+.install-btn {
+  background: #fff; color: var(--gray-dark);
+  border: none; border-radius: 10px;
+  padding: 8px 14px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; flex-shrink: 0;
+}
+.install-close {
+  background: none; border: none; color: rgba(255,255,255,0.5);
+  font-size: 18px; cursor: pointer; flex-shrink: 0; padding: 0;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: calc(var(--safe-top) + 70px);
+  left: 50%; transform: translateX(-50%);
+  background: var(--gray-dark);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 300;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div>
+    <div class="topbar-title">💰 บัญชีรายรับรายจ่าย</div>
+    <div class="topbar-sub" id="weekRange">ประจำสัปดาห์</div>
+  </div>
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)">&#8592;</button>
+    <span class="week-label" id="weekLabel">สัปดาห์นี้</span>
+    <button onclick="changeWeek(1)">&#8594;</button>
+  </div>
+</div>
+
+<!-- Scrollable content -->
+<div class="scroll-area" id="scrollArea">
+
+  <!-- Summary cards -->
+  <div class="cards">
+    <div class="card income">
+      <div class="card-label">รายรับรวม</div>
+      <div class="card-value" id="sumIncome">฿0</div>
+      <div class="card-sub" id="subIncome">0 วัน</div>
+    </div>
+    <div class="card expense">
+      <div class="card-label">รายจ่ายรวม</div>
+      <div class="card-value" id="sumExpense">฿0</div>
+      <div class="card-sub" id="subExpense">0 วัน</div>
+    </div>
+    <div class="card dark card-full">
+      <div class="card-label">ยอดคงเหลือ</div>
+      <div class="card-value" id="sumBalance">฿0</div>
+      <div class="card-sub" id="subBalance">รายรับ - รายจ่าย</div>
+    </div>
+  </div>
+
+  <!-- Day table -->
+  <div class="section">
+    <div class="section-header">บันทึกรายวัน</div>
+    <div id="dayRows"></div>
+    <div class="total-row">
+      <span class="total-label">รวม</span>
+      <div class="total-vals">
+        <span class="total-inc" id="totInc">฿0</span>
+        <span class="total-exp" id="totExp">฿0</span>
+        <span class="total-bal" id="totBal">฿0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="section">
+    <div class="section-header">รายรับ vs รายจ่าย</div>
+    <div class="chart-body" id="chartBody"></div>
+  </div>
+
+  <!-- Monthly section (shown after 4 weeks) -->
+  <div id="monthlySection" style="display:none;">
+    <div class="monthly-divider">
+      <hr><span>สรุปรายเดือน (4 สัปดาห์)</span><hr>
+    </div>
+    <div class="cards" style="margin-bottom:14px;">
+      <div class="card" style="background:var(--green-light);border-color:#9FE1CB;">
+        <div class="card-label" style="color:var(--green);">รายรับ/เดือน</div>
+        <div class="card-value" id="mIncome" style="color:var(--green);">฿0</div>
+        <div class="card-sub" id="mIncomeSub" style="color:var(--green-mid);"></div>
+      </div>
+      <div class="card" style="background:var(--red-light);border-color:#F5C4B3;">
+        <div class="card-label" style="color:var(--red);">รายจ่าย/เดือน</div>
+        <div class="card-value" id="mExpense" style="color:var(--red);">฿0</div>
+        <div class="card-sub" id="mExpenseSub" style="color:var(--red-mid);"></div>
+      </div>
+      <div class="card dark card-full" id="mBalCard">
+        <div class="card-label">ยอดคงเหลือ/เดือน</div>
+        <div class="card-value" id="mBalance">฿0</div>
+        <div class="card-sub" id="mBalanceSub"></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header">แยกตามสัปดาห์</div>
+      <div id="monthlyRows"></div>
+      <div class="month-total">
+        <span class="month-total-label">รวม 4 สัปดาห์</span>
+        <div class="month-total-vals">
+          <span style="font-size:13px;font-weight:700;color:var(--green);" id="mTotInc">฿0</span>
+          <span style="font-size:13px;font-weight:700;color:var(--red);" id="mTotExp">฿0</span>
+          <span style="font-size:15px;font-weight:700;" id="mTotBal">฿0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom tab bar -->
+<div class="tabbar">
+  <div class="tab active" onclick="scrollToTop()">
+    <span class="tab-icon">📋</span>
+    <span class="tab-label">บันทึก</span>
+  </div>
+  <div class="tab" onclick="saveData()">
+    <span class="tab-icon">💾</span>
+    <span class="tab-label">บันทึกข้อมูล</span>
+  </div>
+  <div class="tab" onclick="clearWeek()">
+    <span class="tab-icon">🗑️</span>
+    <span class="tab-label">ล้างสัปดาห์นี้</span>
+  </div>
+</div>
+
+<!-- Install banner -->
+<div id="installBanner" class="hidden">
+  <span class="install-icon">📲</span>
+  <div class="install-text">
+    <strong>ติดตั้งเป็นแอพ</strong>
+    <span>ใช้ได้แม้ไม่มีอินเทอร์เน็ต</span>
+  </div>
+  <button class="install-btn" id="installBtn">ติดตั้ง</button>
+  <button class="install-close" onclick="dismissInstall()">✕</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const DAYS_TH = ["วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์"];
+const DAYS_SHORT = ["จันทร์","อังคาร","พุธ","พฤหัส","ศุกร์"];
+
+let weekOffset = 0;
+let data = {};
+let deferredPrompt = null;
+
+// ── PWA Install ──
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.remove('hidden');
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBanner').classList.add('hidden');
+  if (outcome === 'accepted') showToast('ติดตั้งสำเร็จ! 🎉');
+});
+function dismissInstall() {
+  document.getElementById('installBanner').classList.add('hidden');
+  sessionStorage.setItem('installDismissed', '1');
+}
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── Helpers ──
+function fmt(n) {
+  if (n === 0 || isNaN(n)) return "฿0";
+  return "฿" + Math.round(n).toLocaleString("th-TH");
+}
+function fmtShort(n) {
+  if (!n || isNaN(n)) return "—";
+  if (n >= 1000000) return "฿" + (n/1000000).toFixed(1) + "M";
+  if (n >= 1000) return "฿" + (n/1000).toFixed(1) + "K";
+  return "฿" + Math.round(n).toLocaleString("th-TH");
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function scrollToTop() {
+  document.getElementById('scrollArea').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Week helpers ──
+function getMonday(offset) {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(d.setDate(diff + offset * 7));
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+function getWeekKey(offset) {
+  return getMonday(offset).toISOString().slice(0,10);
+}
+function getWeekDates(offset) {
+  const mon = getMonday(offset);
+  return Array.from({length:5}, (_,i) => {
+    const dd = new Date(mon); dd.setDate(mon.getDate()+i); return dd;
+  });
+}
+function getWeekData() {
+  const key = getWeekKey(weekOffset);
+  if (!data[key]) data[key] = DAYS_TH.map(() => ({income:"",expense:""}));
+  return data[key];
+}
+
+// ── Render ──
+function render() {
+  const dates = getWeekDates(weekOffset);
+  const weekData = getWeekData();
+
+  const opts = { day:"numeric", month:"short" };
+  document.getElementById("weekLabel").textContent =
+    weekOffset===0?"สัปดาห์นี้":weekOffset===-1?"อาทิตย์ที่แล้ว":weekOffset===1?"อาทิตย์หน้า":`${weekOffset>0?"+":""}${weekOffset} สัปดาห์`;
+  document.getElementById("weekRange").textContent =
+    dates[0].toLocaleDateString("th-TH",opts)+" – "+dates[4].toLocaleDateString("th-TH",opts)+" "+(dates[4].getFullYear()+543);
+
+  const container = document.getElementById("dayRows");
+  container.innerHTML = "";
+  let totInc=0, totExp=0, incCount=0, expCount=0;
+
+  // First pass — compute week totals for % of total
+  weekData.forEach(row => {
+    totInc += parseFloat(row.income)||0;
+    totExp += parseFloat(row.expense)||0;
+    if(parseFloat(row.income)>0) incCount++;
+    if(parseFloat(row.expense)>0) expCount++;
+  });
+
+  // Second pass — build rows with %
+  weekData.forEach((row,i) => {
+    const inc = parseFloat(row.income)||0;
+    const exp = parseFloat(row.expense)||0;
+    const bal = inc-exp;
+
+    // % รายจ่าย ÷ รายรับ ของวันนั้น
+    const pctDay = inc>0 ? Math.min(exp/inc*100, 100) : (exp>0 ? 100 : 0);
+    // % รายรับวันนั้น ÷ รายรับรวมทั้งสัปดาห์
+    const pctWeek = totInc>0 ? Math.min(inc/totInc*100, 100) : 0;
+
+    const pctDayColor = pctDay > 80 ? 'var(--red)' : pctDay > 50 ? '#E8820C' : 'var(--green)';
+
+    const dateStr = dates[i].toLocaleDateString("th-TH",{day:"numeric",month:"short"});
+    const div = document.createElement("div");
+    div.className = "day-row";
+    div.id = `dayrow-${i}`;
+    div.innerHTML = `
+      <div class="day-top">
+        <div>
+          <div class="day-name">${DAYS_TH[i]}</div>
+          <div class="day-date">${dateStr}</div>
+        </div>
+        <span class="day-bal ${bal>0?'pos':bal<0?'neg':'zero'}" id="bal-${i}">
+          ${inc===0&&exp===0?"—":fmt(bal)}
+        </span>
+      </div>
+      <div class="day-inputs">
+        <div class="input-group inc">
+          <label>รายรับ (฿)</label>
+          <input type="number" inputmode="decimal" min="0" placeholder="0.00"
+            value="${row.income}" data-idx="${i}" data-type="income"
+            oninput="onInput(this)">
+        </div>
+        <div class="input-group exp">
+          <label>รายจ่าย (฿)</label>
+          <input type="number" inputmode="decimal" min="0" placeholder="0.00"
+            value="${row.expense}" data-idx="${i}" data-type="expense"
+            oninput="onInput(this)">
+        </div>
+      </div>
+      <div class="pct-row" id="pctrow-${i}">
+        <div class="pct-block">
+          <span class="pct-label">รายจ่าย ÷ รายรับ (วันนี้)</span>
+          <div class="pct-line">
+            <div class="pct-track"><div class="pct-fill" style="width:${pctDay.toFixed(1)}%;background:${pctDayColor};"></div></div>
+            <span class="pct-num" style="color:${pctDayColor};">${inc===0&&exp===0?"—":pctDay.toFixed(1)+"%"}</span>
+          </div>
+        </div>
+        <div class="pct-block">
+          <span class="pct-label">รายรับวันนี้ ÷ รายรับรวม</span>
+          <div class="pct-line">
+            <div class="pct-track"><div class="pct-fill" style="width:${pctWeek.toFixed(1)}%;background:var(--green-mid);"></div></div>
+            <span class="pct-num" style="color:var(--green);">${totInc===0?"—":pctWeek.toFixed(1)+"%"}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  updateTotals(totInc, totExp, incCount, expCount);
+  renderChart(weekData);
+  renderMonthly();
+}
+
+function updateTotals(totInc, totExp, incCount, expCount) {
+  const totBal = totInc - totExp;
+  document.getElementById("sumIncome").textContent = fmt(totInc);
+  document.getElementById("subIncome").textContent = incCount+" วัน";
+  document.getElementById("sumExpense").textContent = fmt(totExp);
+  document.getElementById("subExpense").textContent = expCount+" วัน";
+  document.getElementById("sumBalance").textContent = fmt(totBal);
+  document.getElementById("totInc").textContent = fmt(totInc);
+  document.getElementById("totExp").textContent = fmt(totExp);
+  const tb = document.getElementById("totBal");
+  tb.textContent = fmt(totBal);
+  tb.style.color = totBal>=0?"var(--green)":"var(--red)";
+}
+
+function renderChart(weekData) {
+  const maxVal = Math.max(...weekData.map(r=>(parseFloat(r.income)||0)+(parseFloat(r.expense)||0)), 1);
+  const body = document.getElementById("chartBody");
+  body.innerHTML = "";
+  weekData.forEach((row,i) => {
+    const inc = parseFloat(row.income)||0;
+    const exp = parseFloat(row.expense)||0;
+    const div = document.createElement("div");
+    div.className = "chart-row";
+    div.innerHTML = `
+      <span class="chart-day">${DAYS_SHORT[i]}</span>
+      <div class="chart-bars">
+        <div class="bar-track"><div class="bar-fill inc" style="width:${Math.round(inc/maxVal*100)}%"></div></div>
+        <div class="bar-track"><div class="bar-fill exp" style="width:${Math.round(exp/maxVal*100)}%"></div></div>
+      </div>
+      <div class="chart-vals">
+        <span style="color:var(--green);font-weight:600;">${fmtShort(inc)}</span><br>
+        <span style="color:var(--red);font-weight:600;">${fmtShort(exp)}</span>
+      </div>
+    `;
+    body.appendChild(div);
+  });
+}
+
+function renderMonthly() {
+  const weeksWithData = Object.keys(data).sort().filter(k => {
+    return data[k] && data[k].some(r => parseFloat(r.income)>0 || parseFloat(r.expense)>0);
+  });
+  const sec = document.getElementById("monthlySection");
+  if (weeksWithData.length < 4) { sec.style.display="none"; return; }
+  sec.style.display = "block";
+
+  const last4 = weeksWithData.slice(-4);
+  let mTotInc=0, mTotExp=0;
+  const rows = document.getElementById("monthlyRows");
+  rows.innerHTML = "";
+
+  last4.forEach((key,idx) => {
+    const wd = data[key];
+    let wInc=0, wExp=0;
+    wd.forEach(r => { wInc+=parseFloat(r.income)||0; wExp+=parseFloat(r.expense)||0; });
+    mTotInc+=wInc; mTotExp+=wExp;
+    const wBal = wInc-wExp;
+
+    const mon = new Date(key);
+    const fri = new Date(key); fri.setDate(mon.getDate()+4);
+    const rangeStr = mon.toLocaleDateString("th-TH",{day:"numeric",month:"short"})+" – "+fri.toLocaleDateString("th-TH",{day:"numeric",month:"short"});
+
+    const div = document.createElement("div");
+    div.className = "month-week-row";
+    div.innerHTML = `
+      <div>
+        <div class="mw-label">สัปดาห์ที่ ${idx+1}</div>
+        <div class="mw-sub">${rangeStr}</div>
+      </div>
+      <div class="mw-vals">
+        <div class="mw-inc">+${fmt(wInc)}</div>
+        <div class="mw-exp">-${fmt(wExp)}</div>
+        <div class="mw-bal" style="color:${wBal>=0?'var(--green)':'var(--red)'};">${fmt(wBal)}</div>
+      </div>
+    `;
+    rows.appendChild(div);
+  });
+
+  const mBal = mTotInc-mTotExp;
+  document.getElementById("mIncome").textContent = fmt(mTotInc);
+  document.getElementById("mIncomeSub").textContent = "เฉลี่ย "+fmt(Math.round(mTotInc/4))+"/สัปดาห์";
+  document.getElementById("mExpense").textContent = fmt(mTotExp);
+  document.getElementById("mExpenseSub").textContent = "เฉลี่ย "+fmt(Math.round(mTotExp/4))+"/สัปดาห์";
+  document.getElementById("mBalance").textContent = fmt(mBal);
+  document.getElementById("mBalanceSub").textContent = mBal>=0?"เหลือออม ✓":"รายจ่ายเกิน ✗";
+  const balCard = document.getElementById("mBalCard");
+  balCard.style.background = mBal>=0?"var(--gray-dark)":"var(--red)";
+  balCard.style.borderColor = mBal>=0?"var(--gray-dark)":"var(--red)";
+  document.getElementById("mTotInc").textContent = fmt(mTotInc);
+  document.getElementById("mTotExp").textContent = fmt(mTotExp);
+  const mb = document.getElementById("mTotBal");
+  mb.textContent = fmt(mBal);
+  mb.style.color = mBal>=0?"var(--green)":"var(--red)";
+}
+
+function onInput(el) {
+  const idx = parseInt(el.dataset.idx);
+  const type = el.dataset.type;
+  const weekData = getWeekData();
+  weekData[idx][type] = el.value;
+
+  // Recalc week totals
+  let totInc=0,totExp=0,incCount=0,expCount=0;
+  weekData.forEach(r=>{
+    const i=parseFloat(r.income)||0, e=parseFloat(r.expense)||0;
+    totInc+=i; totExp+=e;
+    if(i>0)incCount++; if(e>0)expCount++;
+  });
+
+  // Update each row's balance + % bars
+  weekData.forEach((row,i) => {
+    const inc = parseFloat(row.income)||0;
+    const exp = parseFloat(row.expense)||0;
+    const bal = inc-exp;
+
+    const balEl = document.getElementById("bal-"+i);
+    if(balEl){
+      balEl.textContent = inc===0&&exp===0?"—":fmt(bal);
+      balEl.className = "day-bal "+(bal>0?"pos":bal<0?"neg":"zero");
+    }
+
+    const pctDay = inc>0 ? Math.min(exp/inc*100,100) : (exp>0?100:0);
+    const pctWeek = totInc>0 ? Math.min(inc/totInc*100,100) : 0;
+    const pctDayColor = pctDay>80?'var(--red)':pctDay>50?'#E8820C':'var(--green)';
+
+    const pctRow = document.getElementById("pctrow-"+i);
+    if(pctRow){
+      const fills = pctRow.querySelectorAll(".pct-fill");
+      const nums = pctRow.querySelectorAll(".pct-num");
+      if(fills[0]){ fills[0].style.width=pctDay.toFixed(1)+"%"; fills[0].style.background=pctDayColor; }
+      if(fills[1]){ fills[1].style.width=pctWeek.toFixed(1)+"%"; }
+      if(nums[0]){ nums[0].textContent=inc===0&&exp===0?"—":pctDay.toFixed(1)+"%"; nums[0].style.color=pctDayColor; }
+      if(nums[1]){ nums[1].textContent=totInc===0?"—":pctWeek.toFixed(1)+"%"; }
+    }
+  });
+
+  updateTotals(totInc,totExp,incCount,expCount);
+  renderChart(weekData);
+  renderMonthly();
+}
+
+function changeWeek(dir) { weekOffset+=dir; render(); }
+
+function clearWeek() {
+  if(!confirm("ล้างข้อมูลสัปดาห์นี้?")) return;
+  data[getWeekKey(weekOffset)] = DAYS_TH.map(()=>({income:"",expense:""}));
+  render();
+  showToast("ล้างข้อมูลแล้ว");
+}
+
+function saveData() {
+  try {
+    localStorage.setItem("weeklyBudget", JSON.stringify(data));
+    showToast("บันทึกแล้ว ✓");
+  } catch(e) { showToast("บันทึกไม่ได้"); }
+}
+
+// Load
+try {
+  const saved = localStorage.getItem("weeklyBudget");
+  if(saved) data = JSON.parse(saved);
+} catch(e) {}
+
+// Auto-save on input
+document.addEventListener('input', () => {
+  try { localStorage.setItem("weeklyBudget", JSON.stringify(data)); } catch(e){}
+});
+
+render();
+</script>
+</body>
+</html>
